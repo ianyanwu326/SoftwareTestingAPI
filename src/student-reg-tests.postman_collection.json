@@ -1,0 +1,1604 @@
+{
+  "info": {
+    "name": "Student Registration API tests",
+    "_postman_id": "5b1c2a7e-3f41-4d0a-9a55-6c1d7e0f2a11",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Fetch contract",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('p2_major', 'P2Major' + Date.now());",
+              "pm.collectionVariables.set('p2_instr', Math.floor(100000 + Math.random() * 800000));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Fetch contract returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('contract', pm.response.text());"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/v3/api-docs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "v3",
+            "api-docs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Part 2 - Contract tests",
+      "item": [
+        {
+          "name": "Students",
+          "item": [
+            {
+              "name": "Create student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Create student', 201, 'StudentResponse', ['Location']);",
+                      "const b = H.body(); if (H.isObj(b) && b.id !== undefined) { pm.collectionVariables.set('p2_studentId', b.id); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Student\",\"major\":\"{{p2_major}}\",\"gpa\":3.5,\"dateOfBirth\":\"2004-01-06\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Create student with invalid body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Create student with invalid body', 400);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"\",\"major\":\"Math\",\"gpa\":5}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Get student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Get student', 200, 'StudentResponse');",
+                      "pm.test('Get student never returns dateOfBirth (protected data)', function () { const b = H.body(); pm.expect(H.isObj(b) && ('dateOfBirth' in b)).to.be.false; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/{{p2_studentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "{{p2_studentId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get student with unknown id",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Get unknown student', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "999999999"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List students",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('List students', 200);",
+                      "H.list('List students', 'StudentResponse');",
+                      "const a = H.body();",
+                      "pm.test('List students includes the student just created', function () { pm.expect(Array.isArray(a) && a.some(function (s) { return s.id == pm.collectionVariables.get('p2_studentId'); })).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List students by major",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('List students by major', 200);",
+                      "H.list('List students by major', 'StudentResponse');",
+                      "const a = H.body();",
+                      "pm.test('Every student returned has the requested major', function () { pm.expect(Array.isArray(a) && a.length > 0 && a.every(function (s) { return s.major === pm.collectionVariables.get('p2_major'); })).to.be.true; });",
+                      "pm.test('Filtered list includes the student just created', function () { pm.expect(Array.isArray(a) && a.some(function (s) { return s.id == pm.collectionVariables.get('p2_studentId'); })).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students?major={{p2_major}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students"
+                  ],
+                  "query": [
+                    {
+                      "key": "major",
+                      "value": "{{p2_major}}"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List students by major with no match",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('List students by unmatched major', 200);",
+                      "pm.test('List students by unmatched major returns an empty list', function () { pm.expect(H.body()).to.eql([]); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students?major=NoSuchMajor{{p2_major}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students"
+                  ],
+                  "query": [
+                    {
+                      "key": "major",
+                      "value": "NoSuchMajor{{p2_major}}"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Update student', 200, 'StudentResponse');",
+                      "pm.test('Update student returns the new name', function () { const b = H.body(); pm.expect(H.isObj(b) ? b.name : undefined).to.equal('P2 Student Updated'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/{{p2_studentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "{{p2_studentId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Student Updated\",\"major\":\"{{p2_major}}\",\"gpa\":3.6}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Update student with invalid body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Update student with invalid body', 400);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/{{p2_studentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "{{p2_studentId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"\",\"major\":\"Math\",\"gpa\":5}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Update student with unknown id",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Update unknown student', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "999999999"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Student Updated\",\"major\":\"{{p2_major}}\",\"gpa\":3.6}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Courses",
+          "item": [
+            {
+              "name": "Create course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Create course', 201, 'CourseResponse', ['Location']);",
+                      "const b = H.body(); if (H.isObj(b) && b.id !== undefined) { pm.collectionVariables.set('p2_courseId', b.id); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Course\",\"instructor\":{{p2_instr}},\"maxSize\":2,\"room\":\"P2R\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Create course with invalid body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Create course with invalid body', 400);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"Bad\",\"maxSize\":0,\"room\":\"R\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Create course with unknown roster id",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Create course with unknown roster id', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Ghost\",\"maxSize\":2,\"room\":\"R\",\"roster\":[999999999]}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Get course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Get course', 200, 'CourseResponse');"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "{{p2_courseId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get course with unknown id",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Get unknown course', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "999999999"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List courses",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('List courses', 200);",
+                      "H.list('List courses', 'CourseResponse');",
+                      "const a = H.body();",
+                      "pm.test('List courses includes the course just created', function () { pm.expect(Array.isArray(a) && a.some(function (c) { return c.id == pm.collectionVariables.get('p2_courseId'); })).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List courses by instructorId",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('List courses by instructorId', 200);",
+                      "H.list('List courses by instructorId', 'CourseResponse');",
+                      "const a = H.body();",
+                      "pm.test('Every course returned has the requested instructor', function () { pm.expect(Array.isArray(a) && a.length > 0 && a.every(function (c) { return H.inst(c) == pm.collectionVariables.get('p2_instr'); })).to.be.true; });",
+                      "pm.test('Filtered list includes the course just created', function () { pm.expect(Array.isArray(a) && a.some(function (c) { return c.id == pm.collectionVariables.get('p2_courseId'); })).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses?instructorId={{p2_instr}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ],
+                  "query": [
+                    {
+                      "key": "instructorId",
+                      "value": "{{p2_instr}}"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List courses by instructorId with no match",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('List courses by unmatched instructorId', 200);",
+                      "pm.test('List courses by unmatched instructorId returns an empty list', function () { pm.expect(H.body()).to.eql([]); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses?instructorId=999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ],
+                  "query": [
+                    {
+                      "key": "instructorId",
+                      "value": "999999999"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Update course', 200, 'CourseResponse');",
+                      "pm.test('Update course returns the new name', function () { const b = H.body(); pm.expect(H.isObj(b) ? b.name : undefined).to.equal('P2 Course Updated'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Course Updated\",\"instructor\":{{p2_instr}},\"maxSize\":3,\"room\":\"P2R\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Update course with invalid body",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Update course with invalid body', 400);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"Bad\",\"maxSize\":0,\"room\":\"R\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Update course with unknown id",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Update unknown course', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "999999999"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Course Updated\",\"instructor\":{{p2_instr}},\"maxSize\":3,\"room\":\"P2R\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rosters",
+          "item": [
+            {
+              "name": "Add student to course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Add student', 200, 'CourseResponse');",
+                      "pm.test('Add student puts exactly one student on the roster', function () { const b = H.body(); pm.expect(H.isObj(b) && Array.isArray(b.roster) && b.roster.length === 1, H.notJson()).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/addStudent/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "addStudent",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{p2_studentId}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Add the same student again",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Add a student who is already on the roster', 409);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/addStudent/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "addStudent",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{p2_studentId}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Add unknown student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Add unknown student', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/addStudent/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "addStudent",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "999999999",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Add student to unknown course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Add student to unknown course', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/addStudent/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "addStudent",
+                    "999999999"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{{p2_studentId}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Get enrollment",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('Get enrollment', 200);",
+                      "pm.test('Get enrollment body is an integer', function () { pm.expect(Number.isInteger(H.body())).to.be.true; });",
+                      "pm.test('Get enrollment equals the roster size of 1', function () { pm.expect(H.body()).to.equal(1); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/getEnrollment/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "getEnrollment",
+                    "{{p2_courseId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Get enrollment of unknown course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Get enrollment of unknown course', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/getEnrollment/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "getEnrollment",
+                    "999999999"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List student's courses",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status(\"List student's courses\", 200);",
+                      "H.list(\"List student's courses\", 'CourseResponse');",
+                      "const a = H.body();",
+                      "pm.test(\"List student's courses includes the enrolled course\", function () { pm.expect(Array.isArray(a) && a.some(function (c) { return c.id == pm.collectionVariables.get('p2_courseId'); })).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/{{p2_studentId}}/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "{{p2_studentId}}",
+                    "courses"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "List courses of unknown student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err(\"List courses of unknown student\", 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/999999999/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "999999999",
+                    "courses"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Remove student from course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.ok('Remove student', 200, 'CourseResponse');",
+                      "pm.test('Remove student leaves the roster empty', function () { const b = H.body(); pm.expect(H.isObj(b) && Array.isArray(b.roster) && b.roster.length === 0, H.notJson()).to.be.true; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/removeStudent/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "removeStudent",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"studentId\":{{p2_studentId}}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Remove a student who is not on the roster",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Remove a student who is not on the roster', 409);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/removeStudent/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "removeStudent",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"studentId\":{{p2_studentId}}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Remove student from unknown course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Remove student from unknown course', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/removeStudent/999999999",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "removeStudent",
+                    "999999999"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"studentId\":{{p2_studentId}}}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Remove unknown student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Remove unknown student', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/removeStudent/{{p2_courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "removeStudent",
+                    "{{p2_courseId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"studentId\":999999999}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deletes",
+          "item": [
+            {
+              "name": "Setup - create student to delete",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try { pm.collectionVariables.set('p2_delStudentId', pm.response.json().id); } catch (e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Student\",\"major\":\"{{p2_major}}\",\"gpa\":3.5,\"dateOfBirth\":\"2004-01-06\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Delete student",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('Delete student', 204);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/{{p2_delStudentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "{{p2_delStudentId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete student again",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Delete an already deleted student', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/students/{{p2_delStudentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "students",
+                    "{{p2_delStudentId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Setup - create course to delete",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try { pm.collectionVariables.set('p2_delCourseId', pm.response.json().id); } catch (e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"name\":\"P2 Course\",\"instructor\":{{p2_instr}},\"maxSize\":2,\"room\":\"P2R\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "Delete course",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.status('Delete course', 204);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/{{p2_delCourseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "{{p2_delCourseId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete course again",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const H = eval(pm.collectionVariables.get('helper'));",
+                      "H.err('Delete an already deleted course', 404);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/courses/{{p2_delCourseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "courses",
+                    "{{p2_delCourseId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "contract",
+      "value": ""
+    },
+    {
+      "key": "baselineContract",
+      "value": ""
+    },
+    {
+      "key": "helper",
+      "value": "(function () {\n  var Ajv = require('ajv');\n  var spec = JSON.parse(pm.collectionVariables.get('contract'));\n  var ajv = new Ajv({ allErrors: true, unknownFormats: 'ignore', schemaId: 'auto', validateSchema: false, logger: false });\n  ajv.addSchema(spec, 'spec');\n  var ref = function (name) { return { $ref: 'spec#/components/schemas/' + name }; };\n  var body = function () { try { return pm.response.json(); } catch (e) { return undefined; } };\n  var notJson = function () { return 'Body is not JSON: ' + String(pm.response.text()).slice(0, 80); };\n  var isObj = function (b) { return b !== undefined && b !== null && typeof b === 'object' && !Array.isArray(b); };\n  var validate = function (schema, value) {\n    if (value === undefined) { return notJson(); }\n    return ajv.validate(schema, value) ? '' : ajv.errorsText();\n  };\n  var extrasOf = function (name, value) {\n    var documented = spec.components.schemas[name].properties || {};\n    return Object.keys(value).filter(function (k) { return !(k in documented); });\n  };\n  var status = function (label, code) {\n    pm.test(label + ' returns ' + code, function () { pm.response.to.have.status(code); });\n  };\n  var header = function (label, name) {\n    pm.test(label + ' sends the ' + name + ' header', function () { pm.response.to.have.header(name); });\n  };\n  var schema = function (label, name) {\n    pm.test(label + ' body matches ' + name, function () {\n      var msg = validate(ref(name), body());\n      pm.expect(msg, msg).to.equal('');\n    });\n  };\n  var noExtras = function (label, name) {\n    pm.test(label + ' has no undocumented fields', function () {\n      var b = body();\n      pm.expect(isObj(b), notJson()).to.be.true;\n      var extras = extrasOf(name, b);\n      pm.expect(extras, 'Undocumented: ' + extras.join(', ')).to.be.empty;\n    });\n  };\n  var ok = function (label, code, name, headers) {\n    status(label, code);\n    (headers || []).forEach(function (h) { header(label, h); });\n    schema(label, name);\n    noExtras(label, name);\n  };\n  var list = function (label, name) {\n    pm.test(label + ' returns a JSON array', function () {\n      pm.expect(Array.isArray(body()), notJson()).to.be.true;\n    });\n    pm.test('Every item in ' + label + ' matches ' + name, function () {\n      var arr = body();\n      pm.expect(Array.isArray(arr), notJson()).to.be.true;\n      var bad = [];\n      arr.forEach(function (it, i) { var m = validate(ref(name), it); if (m) { bad.push('item ' + i + ': ' + m); } });\n      pm.expect(bad, bad.slice(0, 3).join(' | ')).to.be.empty;\n    });\n    pm.test('Every item in ' + label + ' has no undocumented fields', function () {\n      var arr = body();\n      pm.expect(Array.isArray(arr), notJson()).to.be.true;\n      var bad = [];\n      arr.forEach(function (it, i) {\n        if (isObj(it)) { var x = extrasOf(name, it); if (x.length) { bad.push('item ' + i + ': ' + x.join(', ')); } }\n      });\n      pm.expect(bad, bad.slice(0, 3).join(' | ')).to.be.empty;\n    });\n  };\n  var err = function (label, code) {\n    status(label, code);\n    schema(label + ' error', 'ErrorResponse');\n    pm.test(label + ' error body status field equals ' + code, function () {\n      var b = body();\n      pm.expect(isObj(b) ? b.status : undefined).to.equal(code);\n    });\n    pm.test(label + ' error body path is the requested path', function () {\n      var b = body();\n      var asked = pm.variables.replaceIn(pm.request.url.getPath());\n      pm.expect(isObj(b) ? b.path : undefined).to.equal(asked);\n    });\n  };\n  var inst = function (c) { return c.instructorId !== undefined ? c.instructorId : c.instructor; };\n  return { body: body, ref: ref, validate: validate, status: status, header: header, schema: schema,\n           noExtras: noExtras, ok: ok, list: list, err: err, inst: inst, isObj: isObj, notJson: notJson };\n})()\n"
+    }
+  ]
+}
